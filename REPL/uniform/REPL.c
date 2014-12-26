@@ -8,6 +8,7 @@ Licensed under GPL Affero 3.0 license.
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 #include "mpc.h"
 
 //For windows compilation
@@ -54,10 +55,12 @@ regex
 /* Uses strcmp to check for operator, return 0 if true */
 // then evaluates x and y arguments
 long eval_op(long x, char* op, long y) {
-  if (strcmp(op, "+") == 0) { return x + y; }
-  if (strcmp(op, "-") == 0) { return x - y; }
-  if (strcmp(op, "*") == 0) { return x * y; }
-  if (strcmp(op, "/") == 0) { return x / y; }
+  if (strcmp(op, "+") == 0) { return x + y;    }
+  if (strcmp(op, "-") == 0) { return x - y;    }
+  if (strcmp(op, "*") == 0) { return x * y;    }
+  if (strcmp(op, "/") == 0) { return x / y;    }
+  if (strcmp(op, "%") == 0) { return x % y;    }
+  if (strcmp(op, "^") == 0) { return pow(x,y); }
   return 0;
 }
 
@@ -94,8 +97,8 @@ int main(int argc, char** argv){
   /* Define them with the following Language */
   mpca_lang(MPCA_LANG_DEFAULT,
   "                                                           \
-  integer    : /-?[0-9]+/ ;                                   \
-  operator   : '+' | '-' | '*' | '/' ;                        \
+  integer    : /-?[0.0-9.9]+/ ;                               \
+  operator   : '+' | '-' | '*' | '/'| '%' | '^' ;             \
   expression : <integer> | '(' <operator> <expression>+ ')' ; \
   sababa     : /^/ <operator> <expression>+ /$/ ;             \
   ",
