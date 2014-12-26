@@ -12,7 +12,6 @@ Licensed under GPL Affero 3.0 license.
 
 //For windows compilation
 #ifdef _WIN32
-#include <string.h>
 
 //buffer for user input up to 2048 characters
 static char hueco[2048];
