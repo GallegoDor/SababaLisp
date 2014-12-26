@@ -2,7 +2,7 @@
 Interactive Prompt REPL (read, evaluate, print, loop) styles.
 Intended for Sababa Programming language, created by Dor Rondél i Gallego.
 All rights reserved Copyright 2014-2015.
-Licensed under GPL Affero 3.0 license.
+Licensed under the Eclipse Public License v1.0
 */
 
 #include <stdio.h>
