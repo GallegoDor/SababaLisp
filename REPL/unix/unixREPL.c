@@ -18,7 +18,7 @@ int main(int argc,char** argv){
   while(true){
     char* input = readline("Sababa> ");
     add_history(input);
-    printf("Suck my %s\n", input);
+    printf("%s\n", input);
     free(input);
   }
   return 0;
