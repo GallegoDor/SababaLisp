@@ -95,7 +95,7 @@ int main(int argc, char** argv){
   /* Define them with the following Language */
   mpca_lang(MPCA_LANG_DEFAULT,
   "                                                           \
-  integer    : /-?[0-9]+/ ;                               \
+  integer    : /-?[0-9]+/ ;                                   \
   operator   : '+' | '-' | '*' | '/' ;                        \
   expression : <integer> | '(' <operator> <expression>+ ')' ; \
   sababa     : /^/ <operator> <expression>+ /$/ ;             \
