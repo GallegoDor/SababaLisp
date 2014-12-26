@@ -18,7 +18,7 @@ int main(int argc,char** argv){
   while(true){
       fputs("lispy> ", stdout);
       fgets(input, 2048, stdin);
-      printf("No you're a %s", input);
+      printf("%s\n", input);
   }
   return 0;
 }
