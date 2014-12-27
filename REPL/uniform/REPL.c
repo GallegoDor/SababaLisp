@@ -1,19 +1,46 @@
+/*
+Interactive Prompt REPL (read, evaluate, print, loop) styles.
+Intended for Sababa Programming language, created by Dor Rondél i Gallego.
+Special thanks to Daniel Holden for the Micro Parser Combinators and guidance.
+All rights reserved Copyright 2014-2015.
+Licensed under the Apache License v2.0
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <math.h>
 #include "mpc.h"
 
+//min and max functions for later use, not built into C
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+//Use these for Sababa's Standard Library
+
+//For windows compilation
 #ifdef _WIN32
 
+//buffer for user input up to 2048 characters
 static char buffer[2048];
 
+//fake editline and edit history, for portability purposes
 char* readline(char* prompt) {
   fputs(prompt, stdout);
   fgets(buffer, 2048, stdin);
   char* cpy = malloc(strlen(buffer)+1);
   strcpy(cpy, buffer);
-  cpy[strlen(cpy)-1] = '\0';
+  cpy[strlen(cpy)-1] = '\0'; //last part of string in C is always \0
   return cpy;
 }
 
+//fake add_history function, no need to further define, just declare
 void add_history(char* unused) {}
+
+
+//For unix systems. Note may vary based on Linux distro and OSX version
+//On arch linux for example, include histedit.h instead!
+//Not all OSX versions come with editline.h in the Command Line Tools.
+//But for now this will do.
 
 #else
 #include <editline/readline.h>
@@ -38,7 +65,7 @@ typedef struct lval lval;
 typedef struct lenv lenv;
 
 /* Lisp Value */
-
+//error, number(int), symbol(operator, letter, number), string, function, Symbolic expression, Quoted expression
 enum { LVAL_ERR, LVAL_NUM,   LVAL_SYM, LVAL_STR,
        LVAL_FUN, LVAL_SEXPR, LVAL_QEXPR };
 
@@ -64,6 +91,7 @@ struct lval {
   lval** cell;
 };
 
+//defining types, and allocating memory for each MUST FREE LATER SINCE USED MALLOC()
 lval* lval_num(long x) {
   lval* v = malloc(sizeof(lval));
   v->type = LVAL_NUM;
@@ -256,6 +284,7 @@ void lval_print_str(lval* v) {
   free(escaped);
 }
 
+//REPLs responses to valid and invalid inputs,
 void lval_print(lval* v) {
   switch (v->type) {
     case LVAL_FUN:
@@ -278,6 +307,7 @@ void lval_print(lval* v) {
   }
 }
 
+//Print a n "lval" (lisp value) followed by a newline, similar to using puts function
 void lval_println(lval* v) { lval_print(v); putchar('\n'); }
 
 int lval_eq(lval* x, lval* y) {
@@ -321,7 +351,7 @@ char* ltype_name(int t) {
 }
 
 /* Lisp Environment */
-
+//Beginning dealing with how it looks in terminal. MUST FREE MALLOCs
 struct lenv {
   lenv* par;
   int count;
@@ -399,7 +429,7 @@ void lenv_def(lenv* e, lval* k, lval* v) {
 }
 
 /* Builtins */
-
+//some built-in functions, I'll make a standard library later with more later.
 #define LASSERT(args, cond, fmt, ...) \
   if (!(cond)) { lval* err = lval_err(fmt, ##__VA_ARGS__); lval_del(args); return err; }
 
@@ -417,7 +447,7 @@ void lenv_def(lenv* e, lval* k, lval* v) {
   LASSERT(args, args->cell[index]->count != 0, \
     "Function '%s' passed {} for argument %i.", func, index);
 
-lval* lval_eval(lenv* e, lval* v);
+lval* lval_eval(lenv* e, lval* v); //must declare here cause function uses it, define later
 
 lval* builtin_lambda(lenv* e, lval* a) {
   LASSERT_NUM("\\", a, 2);
@@ -442,6 +472,7 @@ lval* builtin_list(lenv* e, lval* a) {
   return a;
 }
 
+//Functions that deal with list
 lval* builtin_head(lenv* e, lval* a) {
   LASSERT_NUM("head", a, 1);
   LASSERT_TYPE("head", a, 0, LVAL_QEXPR);
@@ -487,7 +518,9 @@ lval* builtin_join(lenv* e, lval* a) {
   lval_del(a);
   return x;
 }
+//End functions that deal with lists
 
+//Begin built-in operators
 lval* builtin_op(lenv* e, lval* a, char* op) {
 
   for (int i = 0; i < a->count; i++) {
@@ -500,10 +533,14 @@ lval* builtin_op(lenv* e, lval* a, char* op) {
 
   while (a->count > 0) {
     lval* y = lval_pop(a, 0);
-
-    if (strcmp(op, "+") == 0) { x->num += y->num; }
-    if (strcmp(op, "-") == 0) { x->num -= y->num; }
-    if (strcmp(op, "*") == 0) { x->num *= y->num; }
+    //uses strcmp in place of the == boolean operator
+    if (strcmp(op, "+") == 0) { x->num += y->num;             }
+    if (strcmp(op, "-") == 0) { x->num -= y->num;             }
+    if (strcmp(op, "*") == 0) { x->num *= y->num;             }
+    //I added exponential operator, max and min
+    if (strcmp(op, "^") == 0) { x->num = pow(x->num, y->num); }
+    if (strcmp(op, "|") == 0) { x->num = max(x->num, y->num); }
+    if (strcmp(op, "~") == 0) { x->num = min(x->num, y->num); }
     if (strcmp(op, "/") == 0) {
       if (y->num == 0) {
         lval_del(x); lval_del(y);
@@ -511,6 +548,15 @@ lval* builtin_op(lenv* e, lval* a, char* op) {
         break;
       }
       x->num /= y->num;
+    }
+//I added modulo, wasn't in tutorials
+    if (strcmp(op, "%") == 0) {
+      if (y->num == 0) {
+        lval_del(x); lval_del(y);
+        x = lval_err("Division By Zero.");
+        break;
+      }
+      x->num = x->num % y->num;
     }
 
     lval_del(y);
@@ -524,6 +570,11 @@ lval* builtin_add(lenv* e, lval* a) { return builtin_op(e, a, "+"); }
 lval* builtin_sub(lenv* e, lval* a) { return builtin_op(e, a, "-"); }
 lval* builtin_mul(lenv* e, lval* a) { return builtin_op(e, a, "*"); }
 lval* builtin_div(lenv* e, lval* a) { return builtin_op(e, a, "/"); }
+lval* builtin_pow(lenv* e, lval* a) { return builtin_op(e, a, "^"); }
+lval* builtin_mod(lenv* e, lval* a) { return builtin_op(e, a, "%"); }
+lval* builtin_max(lenv* e, lval* a) { return builtin_op(e, a, "|"); }
+lval* builtin_min(lenv* e, lval* a) { return builtin_op(e, a, "~"); }
+//end built-in operators, need to delcare them all later
 
 lval* builtin_var(lenv* e, lval* a, char* func) {
   LASSERT_TYPE(func, a, 0, LVAL_QEXPR);
@@ -699,6 +750,10 @@ void lenv_add_builtins(lenv* e) {
   lenv_add_builtin(e, "-", builtin_sub);
   lenv_add_builtin(e, "*", builtin_mul);
   lenv_add_builtin(e, "/", builtin_div);
+  lenv_add_builtin(e, "^", builtin_pow);
+  lenv_add_builtin(e, "%", builtin_mod);
+  lenv_add_builtin(e, "|", builtin_max);
+  lenv_add_builtin(e, "~", builtin_min);
 
   /* Comparison Functions */
   lenv_add_builtin(e, "if", builtin_if);
@@ -860,7 +915,21 @@ lval* lval_read(mpc_ast_t* t) {
   return x;
 }
 
-/* Main */
+//This is where the languages grammer is defined
+//what may or may not be used, Polish notation etc.
+//Must be done in REGEX or regular expressions so for give me if its unclear
+/*  expression is *10 (+ 1 51) How it's represented in ast
+regex
+operator|char:1:1 '*'               <-- operator
+expr|number|regex:1:3 '10'          <-- int
+expr|>                              <-- node with branches
+char:1:6 '('                      <-- index 0 can ignore
+operator|char:1:7 '+'             <-- operator always index 1
+expr|number|regex:1:9 '1'         <-- saved as sum
+expr|number|regex:1:11 '51'       <-- added to create new x through recursion
+char:1:13 ')'                     <-- non-number may ignore
+regex
+*/
 
 int main(int argc, char** argv) {
 
@@ -874,31 +943,32 @@ int main(int argc, char** argv) {
   Sababa   = mpc_new("sababa");
 
   mpca_lang(MPCA_LANG_DEFAULT,
-    "                                              \
-      number  : /-?[0-9]+/ ;                       \
-      symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/ ; \
-      string  : /\"(\\\\.|[^\"])*\"/ ;             \
-      comment : /;[^\\r\\n]*/ ;                    \
-      sexpr   : '(' <expr>* ')' ;                  \
-      qexpr   : '{' <expr>* '}' ;                  \
-      expr    : <number>  | <symbol> | <string>    \
-              | <comment> | <sexpr>  | <qexpr>;    \
-      sababa   : /^/ <expr>* /$/ ;                 \
+    "                                                  \
+      number  : /-?[0-9]+/ ;                           \
+      symbol  : /[a-zA-Z0-9_+\\-*\\/\\\\|~=<>!&%^]+/ ; \
+      string  : /\"(\\\\.|[^\"])*\"/ ;                 \
+      comment : /;[^\\r\\n]*/ ;                        \
+      sexpr   : '(' <expr>* ')' ;                      \
+      qexpr   : '{' <expr>* '}' ;                      \
+      expr    : <number>  | <symbol> | <string>        \
+              | <comment> | <sexpr>  | <qexpr>;        \
+      sababa   : /^/ <expr>* /$/ ;                     \
     ",
     Number, Symbol, String, Comment, Sexpr, Qexpr, Expr, Sababa);
 
   lenv* e = lenv_new();
   lenv_add_builtins(e);
 
-  /* Interactive Prompt */
+  //This the REPL itself basically. Can I call it frontend if i tell you to play with the terminal settings and change color?
   if (argc == 1) {
 
-    puts("Sababa Version 0.0.0.1.0");
-    puts("Press Ctrl+c to Exit\n");
+    puts("\t\t\tSababa Version 0.0.0.1.3");
+    puts("\t\t\tStill a work in progress");
+    puts("\t\t\t  Press Ctrl+c to Exit\n");
 
     while (1) {
 
-      char* input = readline("sababa> ");
+      char* input = readline("sababa>");
       add_history(input);
 
       mpc_result_t r;
@@ -945,3 +1015,9 @@ int main(int argc, char** argv) {
 
   return 0;
 }
+
+/*phew that was alot, I'll be writing up some Sababa functions
+and documentation for now. I've been waiting to write
+the upcoming three letters haha*/
+
+//END
