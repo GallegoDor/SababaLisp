@@ -1,1 +1,15 @@
-;testing 
+;**********************************************
+;**********SABABA STANDARD LIBRARY*************
+;**********************************************
+
+;written by Dor Rondel
+
+;PI - mathematic value
+  
+  var{pi} 3.14159265359
+
+;e - mathematic value
+
+  var{e} 2.71828
+  
+;Note: floats are non supported in the current Sababa version
