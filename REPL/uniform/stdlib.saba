@@ -15,5 +15,8 @@
 ;absolute value
 
   def{abs} (\ {x} {if (< x 0){* x (- 1 2)}{x}})
+  
+;identity function
+  def{identity} (\ {val} {val})
 
 ;Note: floats are non supported in the current Sababa version
